@@ -33,14 +33,14 @@ class TributeRange {
       }
 
       if (!this.isContentEditable(context.element)) {
-        coordinates = this.getTextAreaOrInputUnderlinePosition(this.tribute.current.element,
-          info.mentionPosition)
+        coordinates = this.getTextAreaOrInputUnderlinePosition(this.tribute.current.element, info.mentionPosition)
       }
       else {
         coordinates = this.getContentEditableCaretPosition(info.mentionPosition)
       }
-      if (typeof this.tribute.positionMenu === 'number') {
-        coordinates.left = coordinates.left - this.tribute.positionMenu / 2;
+      if (typeof this.tribute.positionMenu === 'object') {
+        const {positionMenu} = this.tribute;
+        coordinates.left = coordinates.left + (positionMenu.fontSize || 12) - positionMenu.width / 2;
       }
       this.tribute.menu.style.cssText = `top: ${coordinates.top}px;
                                      left: ${coordinates.left}px;

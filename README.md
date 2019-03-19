@@ -5,8 +5,8 @@ Collections are configuration objects for Tribute, you can have multiple for eac
 Collection object shown with defaults:
 ```js
 {
-  //ture:自动定位，false：手动定位，other：at列表宽度
-  positionMenu: true||false||"tribute-container's width",
+  //ture:自动定位，false：手动定位，other：trigger fontSize,width at 列表宽度
+  positionMenu: true||false||{width: , fontSize: 12}
 
 }
 ```
