@@ -1,46 +1,48 @@
 // Thanks to https://github.com/jeff-collins/ment.io
 class TributeRange {
-    constructor(tribute) {
-        this.tribute = tribute
-        this.tribute.range = this
+  constructor(tribute) {
+    this.tribute = tribute
+    this.tribute.range = this
+  }
+
+  getDocument() {
+    let iframe
+    if (this.tribute.current.collection) {
+      iframe = this.tribute.current.collection.iframe
     }
 
-    getDocument() {
-        let iframe
-        if (this.tribute.current.collection) {
-            iframe = this.tribute.current.collection.iframe
-        }
-
-        if (!iframe) {
-            return document
-        }
-
-        return iframe.contentWindow.document
+    if (!iframe) {
+      return document
     }
 
-    positionMenuAtCaret(scrollTo) {
-        let context = this.tribute.current,
-            coordinates
+    return iframe.contentWindow.document
+  }
 
-        let info = this.getTriggerInfo(false, this.tribute.hasTrailingSpace, true, this.tribute.allowSpaces, this.tribute.autocompleteMode)
+  positionMenuAtCaret(scrollTo) {
+    let context = this.tribute.current,
+      coordinates
 
-        if (typeof info !== 'undefined') {
+    let info = this.getTriggerInfo(false, this.tribute.hasTrailingSpace, true, this.tribute.allowSpaces, this.tribute.autocompleteMode)
 
-            if(!this.tribute.positionMenu){
-                this.tribute.menu.style.cssText = `display: block;`
-                return
-            }
-
-            if (!this.isContentEditable(context.element)) {
-                coordinates = this.getTextAreaOrInputUnderlinePosition(this.tribute.current.element,
-                    info.mentionPosition)
-            }
-            else {
-                coordinates = this.getContentEditableCaretPosition(info.mentionPosition)
-            }
+    if (typeof info !== 'undefined') {
 
 
-            this.tribute.menu.style.cssText = `top: ${coordinates.top}px;
+      if (typeof this.tribute.positionMenu === 'boolean' && !this.tribute.positionMenu) {
+        this.tribute.menu.style.cssText = `display: block;`
+        return
+      }
+
+      if (!this.isContentEditable(context.element)) {
+        coordinates = this.getTextAreaOrInputUnderlinePosition(this.tribute.current.element,
+          info.mentionPosition)
+      }
+      else {
+        coordinates = this.getContentEditableCaretPosition(info.mentionPosition)
+      }
+      if (typeof this.tribute.positionMenu === 'number') {
+        coordinates.left = coordinates.left - this.tribute.positionMenu / 2;
+      }
+      this.tribute.menu.style.cssText = `top: ${coordinates.top}px;
                                      left: ${coordinates.left}px;
                                      right: ${coordinates.right}px;
                                      bottom: ${coordinates.bottom}px;
@@ -48,596 +50,597 @@ class TributeRange {
                                      zIndex: 10000;
                                      display: block;`
 
-            if (coordinates.left === 'auto') {
-                this.tribute.menu.style.left = 'auto'
-            }
+      if (coordinates.left === 'auto') {
+        this.tribute.menu.style.left = 'auto'
+      }
 
-            if (coordinates.top === 'auto') {
-                this.tribute.menu.style.top = 'auto'
-            }
+      if (coordinates.top === 'auto') {
+        this.tribute.menu.style.top = 'auto'
+      }
 
-            if (scrollTo) this.scrollIntoView()
+      if (scrollTo) this.scrollIntoView()
 
-            window.setTimeout(() => {
-                let menuDimensions = {
-                   width: this.tribute.menu.offsetWidth,
-                   height: this.tribute.menu.offsetHeight
-                }
-                let menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
-
-                let menuIsOffScreenHorizontally = window.innerWidth > menuDimensions.width && (menuIsOffScreen.left || menuIsOffScreen.right)
-                let menuIsOffScreenVertically = window.innerHeight > menuDimensions.height && (menuIsOffScreen.top || menuIsOffScreen.bottom)
-                if (menuIsOffScreenHorizontally || menuIsOffScreenVertically) {
-                    this.tribute.menu.style.cssText = 'display: none'
-                    this.positionMenuAtCaret(scrollTo)
-                }
-            }, 0)
-
-        } else {
-            this.tribute.menu.style.cssText = 'display: none'
+      window.setTimeout(() => {
+        let menuDimensions = {
+          width: this.tribute.menu.offsetWidth,
+          height: this.tribute.menu.offsetHeight
         }
+        let menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
+
+        let menuIsOffScreenHorizontally = window.innerWidth > menuDimensions.width && (menuIsOffScreen.left || menuIsOffScreen.right)
+        let menuIsOffScreenVertically = window.innerHeight > menuDimensions.height && (menuIsOffScreen.top || menuIsOffScreen.bottom)
+        if (menuIsOffScreenHorizontally || menuIsOffScreenVertically) {
+          this.tribute.menu.style.cssText = 'display: none'
+          this.positionMenuAtCaret(scrollTo)
+        }
+      }, 0)
+
+    } else {
+      this.tribute.menu.style.cssText = 'display: none'
+    }
+  }
+
+  selectElement(targetElement, path, offset) {
+    let range
+    let elem = targetElement
+
+    if (path) {
+      for (var i = 0; i < path.length; i++) {
+        elem = elem.childNodes[path[i]]
+        if (elem === undefined) {
+          return
+        }
+        while (elem.length < offset) {
+          offset -= elem.length
+          elem = elem.nextSibling
+        }
+        if (elem.childNodes.length === 0 && !elem.length) {
+          elem = elem.previousSibling
+        }
+      }
+    }
+    let sel = this.getWindowSelection()
+
+    range = this.getDocument().createRange()
+    range.setStart(elem, offset)
+    range.setEnd(elem, offset)
+    range.collapse(true)
+
+    try {
+      sel.removeAllRanges()
+    } catch (error) {
     }
 
-    selectElement(targetElement, path, offset) {
-        let range
-        let elem = targetElement
+    sel.addRange(range)
+    targetElement.focus()
+  }
 
-        if (path) {
-            for (var i = 0; i < path.length; i++) {
-                elem = elem.childNodes[path[i]]
-                if (elem === undefined) {
-                    return
-                }
-                while (elem.length < offset) {
-                    offset -= elem.length
-                    elem = elem.nextSibling
-                }
-                if (elem.childNodes.length === 0 && !elem.length) {
-                    elem = elem.previousSibling
-                }
-            }
-        }
-        let sel = this.getWindowSelection()
+  replaceTriggerText(text, requireLeadingSpace, hasTrailingSpace, originalEvent, item) {
+    let context = this.tribute.current
+    let info = this.getTriggerInfo(true, hasTrailingSpace, requireLeadingSpace, this.tribute.allowSpaces, this.tribute.autocompleteMode)
 
-        range = this.getDocument().createRange()
-        range.setStart(elem, offset)
-        range.setEnd(elem, offset)
-        range.collapse(true)
+    // Create the event
+    let replaceEvent = new CustomEvent('tribute-replaced', {
+      detail: {
+        item: item,
+        event: originalEvent
+      }
+    })
 
-        try {
-            sel.removeAllRanges()
-        } catch (error) {}
+    if (info !== undefined) {
+      if (!this.isContentEditable(context.element)) {
+        let myField = this.tribute.current.element
+        let textSuffix = typeof this.tribute.replaceTextSuffix == 'string'
+          ? this.tribute.replaceTextSuffix
+          : ' '
+        text += textSuffix
+        let startPos = info.mentionPosition
+        let endPos = info.mentionPosition + info.mentionText.length + textSuffix.length
+        myField.value = myField.value.substring(0, startPos) + text +
+          myField.value.substring(endPos, myField.value.length)
+        myField.selectionStart = startPos + text.length
+        myField.selectionEnd = startPos + text.length
+      } else {
+        // add a space to the end of the pasted text
+        let textSuffix = typeof this.tribute.replaceTextSuffix == 'string'
+          ? this.tribute.replaceTextSuffix
+          : '\xA0'
+        text += textSuffix
+        this.pasteHtml(text, info.mentionPosition,
+          info.mentionPosition + info.mentionText.length + !this.tribute.autocompleteMode)
+      }
 
-        sel.addRange(range)
-        targetElement.focus()
+      context.element.dispatchEvent(replaceEvent)
+    }
+  }
+
+  pasteHtml(html, startPos, endPos) {
+    let range, sel
+    sel = this.getWindowSelection()
+    range = this.getDocument().createRange()
+    range.setStart(sel.anchorNode, startPos)
+    range.setEnd(sel.anchorNode, endPos)
+    range.deleteContents()
+
+    let el = this.getDocument().createElement('div')
+    el.innerHTML = html
+    let frag = this.getDocument().createDocumentFragment(),
+      node, lastNode
+    while ((node = el.firstChild)) {
+      lastNode = frag.appendChild(node)
+    }
+    range.insertNode(frag)
+
+    // Preserve the selection
+    if (lastNode) {
+      range = range.cloneRange()
+      range.setStartAfter(lastNode)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+  }
+
+  getWindowSelection() {
+    if (this.tribute.collection.iframe) {
+      return this.tribute.collection.iframe.contentWindow.getSelection()
     }
 
-    replaceTriggerText(text, requireLeadingSpace, hasTrailingSpace, originalEvent, item) {
-        let context = this.tribute.current
-        let info = this.getTriggerInfo(true, hasTrailingSpace, requireLeadingSpace, this.tribute.allowSpaces, this.tribute.autocompleteMode)
+    return window.getSelection()
+  }
 
-        // Create the event
-        let replaceEvent = new CustomEvent('tribute-replaced', {
-            detail: {
-                item: item,
-                event: originalEvent
-            }
-        })
-
-        if (info !== undefined) {
-            if (!this.isContentEditable(context.element)) {
-                let myField = this.tribute.current.element
-                let textSuffix = typeof this.tribute.replaceTextSuffix == 'string'
-                    ? this.tribute.replaceTextSuffix
-                    : ' '
-                text += textSuffix
-                let startPos = info.mentionPosition
-                let endPos = info.mentionPosition + info.mentionText.length + textSuffix.length
-                myField.value = myField.value.substring(0, startPos) + text +
-                    myField.value.substring(endPos, myField.value.length)
-                myField.selectionStart = startPos + text.length
-                myField.selectionEnd = startPos + text.length
-            } else {
-                // add a space to the end of the pasted text
-                let textSuffix = typeof this.tribute.replaceTextSuffix == 'string'
-                    ? this.tribute.replaceTextSuffix
-                    : '\xA0'
-                text += textSuffix
-                this.pasteHtml(text, info.mentionPosition,
-                    info.mentionPosition + info.mentionText.length + !this.tribute.autocompleteMode)
-            }
-
-            context.element.dispatchEvent(replaceEvent)
-        }
+  getNodePositionInParent(element) {
+    if (element.parentNode === null) {
+      return 0
     }
 
-    pasteHtml(html, startPos, endPos) {
-        let range, sel
-        sel = this.getWindowSelection()
-        range = this.getDocument().createRange()
-        range.setStart(sel.anchorNode, startPos)
-        range.setEnd(sel.anchorNode, endPos)
-        range.deleteContents()
+    for (var i = 0; i < element.parentNode.childNodes.length; i++) {
+      let node = element.parentNode.childNodes[i]
 
-        let el = this.getDocument().createElement('div')
-        el.innerHTML = html
-        let frag = this.getDocument().createDocumentFragment(),
-            node, lastNode
-        while ((node = el.firstChild)) {
-            lastNode = frag.appendChild(node)
-        }
-        range.insertNode(frag)
+      if (node === element) {
+        return i
+      }
+    }
+  }
 
-        // Preserve the selection
-        if (lastNode) {
-            range = range.cloneRange()
-            range.setStartAfter(lastNode)
-            range.collapse(true)
-            sel.removeAllRanges()
-            sel.addRange(range)
+  getContentEditableSelectedPath(ctx) {
+    let sel = this.getWindowSelection()
+    let selected = sel.anchorNode
+    let path = []
+    let offset
+
+    if (selected != null) {
+      let i
+      let ce = selected.contentEditable
+      while (selected !== null && ce !== 'true') {
+        i = this.getNodePositionInParent(selected)
+        path.push(i)
+        selected = selected.parentNode
+        if (selected !== null) {
+          ce = selected.contentEditable
         }
+      }
+      path.reverse()
+
+      // getRangeAt may not exist, need alternative
+      offset = sel.getRangeAt(0).startOffset
+
+      return {
+        selected: selected,
+        path: path,
+        offset: offset
+      }
+    }
+  }
+
+  getTextPrecedingCurrentSelection() {
+    let context = this.tribute.current,
+      text = ''
+
+    if (!this.isContentEditable(context.element)) {
+      let textComponent = this.tribute.current.element;
+      if (textComponent) {
+        let startPos = textComponent.selectionStart
+        if (textComponent.value && startPos >= 0) {
+          text = textComponent.value.substring(0, startPos)
+        }
+      }
+
+    } else {
+      let selectedElem = this.getWindowSelection().anchorNode
+
+      if (selectedElem != null) {
+        let workingNodeContent = selectedElem.textContent
+        let selectStartOffset = this.getWindowSelection().getRangeAt(0).startOffset
+
+        if (workingNodeContent && selectStartOffset >= 0) {
+          text = workingNodeContent.substring(0, selectStartOffset)
+        }
+      }
     }
 
-    getWindowSelection() {
-        if (this.tribute.collection.iframe) {
-            return this.tribute.collection.iframe.contentWindow.getSelection()
-        }
+    return text
+  }
 
-        return window.getSelection()
+  getLastWordInText(text) {
+    text = text.replace(/\u00A0/g, ' '); // https://stackoverflow.com/questions/29850407/how-do-i-replace-unicode-character-u00a0-with-a-space-in-javascript
+    let wordsArray = text.split(' ')
+    let worldsCount = wordsArray.length - 1
+    return wordsArray[worldsCount].trim()
+  }
+
+  getTriggerInfo(menuAlreadyActive, hasTrailingSpace, requireLeadingSpace, allowSpaces, isAutocomplete) {
+    let ctx = this.tribute.current
+    let selected, path, offset
+
+    if (!this.isContentEditable(ctx.element)) {
+      selected = this.tribute.current.element
+    } else {
+      let selectionInfo = this.getContentEditableSelectedPath(ctx)
+
+      if (selectionInfo) {
+        selected = selectionInfo.selected
+        path = selectionInfo.path
+        offset = selectionInfo.offset
+      }
     }
 
-    getNodePositionInParent(element) {
-        if (element.parentNode === null) {
-            return 0
-        }
+    let effectiveRange = this.getTextPrecedingCurrentSelection()
+    let lastWordOfEffectiveRange = this.getLastWordInText(effectiveRange)
 
-        for (var i = 0; i < element.parentNode.childNodes.length; i++) {
-            let node = element.parentNode.childNodes[i]
-
-            if (node === element) {
-                return i
-            }
-        }
+    if (isAutocomplete) {
+      return {
+        mentionPosition: effectiveRange.length - lastWordOfEffectiveRange.length,
+        mentionText: lastWordOfEffectiveRange,
+        mentionSelectedElement: selected,
+        mentionSelectedPath: path,
+        mentionSelectedOffset: offset
+      }
     }
 
-    getContentEditableSelectedPath(ctx) {
-        let sel = this.getWindowSelection()
-        let selected = sel.anchorNode
-        let path = []
-        let offset
+    if (effectiveRange !== undefined && effectiveRange !== null) {
+      let mostRecentTriggerCharPos = -1
+      let triggerChar
 
-        if (selected != null) {
-            let i
-            let ce = selected.contentEditable
-            while (selected !== null && ce !== 'true') {
-                i = this.getNodePositionInParent(selected)
-                path.push(i)
-                selected = selected.parentNode
-                if (selected !== null) {
-                    ce = selected.contentEditable
-                }
-            }
-            path.reverse()
+      this.tribute.collection.forEach(config => {
+        let c = config.trigger
+        let idx = config.requireLeadingSpace ?
+          this.lastIndexWithLeadingSpace(effectiveRange, c) :
+          effectiveRange.lastIndexOf(c)
 
-            // getRangeAt may not exist, need alternative
-            offset = sel.getRangeAt(0).startOffset
-
-            return {
-                selected: selected,
-                path: path,
-                offset: offset
-            }
+        if (idx > mostRecentTriggerCharPos) {
+          mostRecentTriggerCharPos = idx
+          triggerChar = c
+          requireLeadingSpace = config.requireLeadingSpace
         }
+      })
+
+      if (mostRecentTriggerCharPos >= 0 &&
+        (
+          mostRecentTriggerCharPos === 0 ||
+          !requireLeadingSpace ||
+          /[\xA0\s]/g.test(
+            effectiveRange.substring(
+              mostRecentTriggerCharPos - 1,
+              mostRecentTriggerCharPos)
+          )
+        )
+      ) {
+        let currentTriggerSnippet = effectiveRange.substring(mostRecentTriggerCharPos + 1,
+          effectiveRange.length)
+
+        triggerChar = effectiveRange.substring(mostRecentTriggerCharPos, mostRecentTriggerCharPos + 1)
+        let firstSnippetChar = currentTriggerSnippet.substring(0, 1)
+        let leadingSpace = currentTriggerSnippet.length > 0 &&
+          (
+            firstSnippetChar === ' ' ||
+            firstSnippetChar === '\xA0'
+          )
+        if (hasTrailingSpace) {
+          currentTriggerSnippet = currentTriggerSnippet.trim()
+        }
+
+        let regex = allowSpaces ? /[^\S ]/g : /[\xA0\s]/g;
+
+        this.tribute.hasTrailingSpace = regex.test(currentTriggerSnippet);
+
+        if (!leadingSpace && (menuAlreadyActive || !(regex.test(currentTriggerSnippet)))) {
+          return {
+            mentionPosition: mostRecentTriggerCharPos,
+            mentionText: currentTriggerSnippet,
+            mentionSelectedElement: selected,
+            mentionSelectedPath: path,
+            mentionSelectedOffset: offset,
+            mentionTriggerChar: triggerChar
+          }
+        }
+      }
+    }
+  }
+
+  lastIndexWithLeadingSpace(str, char) {
+    let reversedStr = str.split('').reverse().join('')
+    let index = -1
+
+    for (let cidx = 0, len = str.length; cidx < len; cidx++) {
+      let firstChar = cidx === str.length - 1
+      let leadingSpace = /\s/.test(reversedStr[cidx + 1])
+      let match = char === reversedStr[cidx]
+
+      if (match && (firstChar || leadingSpace)) {
+        index = str.length - 1 - cidx
+        break
+      }
     }
 
-    getTextPrecedingCurrentSelection() {
-        let context = this.tribute.current,
-            text = ''
+    return index
+  }
 
-        if (!this.isContentEditable(context.element)) {
-            let textComponent = this.tribute.current.element;
-            if (textComponent) {
-                let startPos = textComponent.selectionStart
-                if (textComponent.value && startPos >= 0) {
-                    text = textComponent.value.substring(0, startPos)
-                }
-            }
+  isContentEditable(element) {
+    return element.nodeName !== 'INPUT' && element.nodeName !== 'TEXTAREA'
+  }
 
-        } else {
-            let selectedElem = this.getWindowSelection().anchorNode
+  isMenuOffScreen(coordinates, menuDimensions) {
+    let windowWidth = window.innerWidth
+    let windowHeight = window.innerHeight
+    let doc = document.documentElement
+    let windowLeft = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0)
+    let windowTop = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
 
-            if (selectedElem != null) {
-                let workingNodeContent = selectedElem.textContent
-                let selectStartOffset = this.getWindowSelection().getRangeAt(0).startOffset
+    let menuTop = typeof coordinates.top === 'number' ? coordinates.top : windowTop + windowHeight - coordinates.bottom - menuDimensions.height
+    let menuRight = typeof coordinates.right === 'number' ? coordinates.right : coordinates.left + menuDimensions.width
+    let menuBottom = typeof coordinates.bottom === 'number' ? coordinates.bottom : coordinates.top + menuDimensions.height
+    let menuLeft = typeof coordinates.left === 'number' ? coordinates.left : windowLeft + windowWidth - coordinates.right - menuDimensions.width
 
-                if (workingNodeContent && selectStartOffset >= 0) {
-                    text = workingNodeContent.substring(0, selectStartOffset)
-                }
-            }
-        }
+    return {
+      top: menuTop < Math.floor(windowTop),
+      right: menuRight > Math.ceil(windowLeft + windowWidth),
+      bottom: menuBottom > Math.ceil(windowTop + windowHeight),
+      left: menuLeft < Math.floor(windowLeft)
+    }
+  }
 
-        return text
+  getMenuDimensions() {
+    // Width of the menu depends of its contents and position
+    // We must check what its width would be without any obstruction
+    // This way, we can achieve good positioning for flipping the menu
+    let dimensions = {
+      width: null,
+      height: null
     }
 
-    getLastWordInText(text) {
-        text = text.replace(/\u00A0/g, ' '); // https://stackoverflow.com/questions/29850407/how-do-i-replace-unicode-character-u00a0-with-a-space-in-javascript
-        let wordsArray = text.split(' ')
-        let worldsCount = wordsArray.length - 1
-        return wordsArray[worldsCount].trim()
-    }
-
-    getTriggerInfo(menuAlreadyActive, hasTrailingSpace, requireLeadingSpace, allowSpaces, isAutocomplete) {
-        let ctx = this.tribute.current
-        let selected, path, offset
-
-        if (!this.isContentEditable(ctx.element)) {
-            selected = this.tribute.current.element
-        } else {
-            let selectionInfo = this.getContentEditableSelectedPath(ctx)
-
-            if (selectionInfo) {
-                selected = selectionInfo.selected
-                path = selectionInfo.path
-                offset = selectionInfo.offset
-            }
-        }
-
-        let effectiveRange = this.getTextPrecedingCurrentSelection()
-        let lastWordOfEffectiveRange = this.getLastWordInText(effectiveRange)
-
-        if (isAutocomplete) {
-            return {
-                mentionPosition: effectiveRange.length - lastWordOfEffectiveRange.length,
-                mentionText: lastWordOfEffectiveRange,
-                mentionSelectedElement: selected,
-                mentionSelectedPath: path,
-                mentionSelectedOffset: offset
-            }
-        }
-
-        if (effectiveRange !== undefined && effectiveRange !== null) {
-            let mostRecentTriggerCharPos = -1
-            let triggerChar
-
-            this.tribute.collection.forEach(config => {
-                let c = config.trigger
-                let idx = config.requireLeadingSpace ?
-                    this.lastIndexWithLeadingSpace(effectiveRange, c) :
-                    effectiveRange.lastIndexOf(c)
-
-                if (idx > mostRecentTriggerCharPos) {
-                    mostRecentTriggerCharPos = idx
-                    triggerChar = c
-                    requireLeadingSpace = config.requireLeadingSpace
-                }
-            })
-
-            if (mostRecentTriggerCharPos >= 0 &&
-                (
-                    mostRecentTriggerCharPos === 0 ||
-                    !requireLeadingSpace ||
-                    /[\xA0\s]/g.test(
-                        effectiveRange.substring(
-                            mostRecentTriggerCharPos - 1,
-                            mostRecentTriggerCharPos)
-                    )
-                )
-            ) {
-                let currentTriggerSnippet = effectiveRange.substring(mostRecentTriggerCharPos + 1,
-                    effectiveRange.length)
-
-                triggerChar = effectiveRange.substring(mostRecentTriggerCharPos, mostRecentTriggerCharPos + 1)
-                let firstSnippetChar = currentTriggerSnippet.substring(0, 1)
-                let leadingSpace = currentTriggerSnippet.length > 0 &&
-                    (
-                        firstSnippetChar === ' ' ||
-                        firstSnippetChar === '\xA0'
-                    )
-                if (hasTrailingSpace) {
-                    currentTriggerSnippet = currentTriggerSnippet.trim()
-                }
-
-                let regex = allowSpaces ? /[^\S ]/g : /[\xA0\s]/g;
-
-                this.tribute.hasTrailingSpace = regex.test(currentTriggerSnippet);
-
-                if (!leadingSpace && (menuAlreadyActive || !(regex.test(currentTriggerSnippet)))) {
-                    return {
-                        mentionPosition: mostRecentTriggerCharPos,
-                        mentionText: currentTriggerSnippet,
-                        mentionSelectedElement: selected,
-                        mentionSelectedPath: path,
-                        mentionSelectedOffset: offset,
-                        mentionTriggerChar: triggerChar
-                    }
-                }
-            }
-        }
-    }
-
-    lastIndexWithLeadingSpace (str, char) {
-        let reversedStr = str.split('').reverse().join('')
-        let index = -1
-
-        for (let cidx = 0, len = str.length; cidx < len; cidx++) {
-            let firstChar = cidx === str.length - 1
-            let leadingSpace = /\s/.test(reversedStr[cidx + 1])
-            let match = char === reversedStr[cidx]
-
-            if (match && (firstChar || leadingSpace)) {
-                index = str.length - 1 - cidx
-                break
-            }
-        }
-
-        return index
-    }
-
-    isContentEditable(element) {
-        return element.nodeName !== 'INPUT' && element.nodeName !== 'TEXTAREA'
-    }
-
-    isMenuOffScreen(coordinates, menuDimensions) {
-        let windowWidth = window.innerWidth
-        let windowHeight = window.innerHeight
-        let doc = document.documentElement
-        let windowLeft = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0)
-        let windowTop = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
-
-        let menuTop = typeof coordinates.top === 'number' ? coordinates.top : windowTop + windowHeight - coordinates.bottom - menuDimensions.height
-        let menuRight = typeof coordinates.right === 'number' ? coordinates.right : coordinates.left + menuDimensions.width
-        let menuBottom = typeof coordinates.bottom === 'number' ? coordinates.bottom : coordinates.top + menuDimensions.height
-        let menuLeft = typeof coordinates.left === 'number' ? coordinates.left : windowLeft + windowWidth - coordinates.right - menuDimensions.width
-
-        return {
-            top: menuTop < Math.floor(windowTop),
-            right: menuRight > Math.ceil(windowLeft + windowWidth),
-            bottom: menuBottom > Math.ceil(windowTop + windowHeight),
-            left: menuLeft < Math.floor(windowLeft)
-        }
-    }
-
-    getMenuDimensions() {
-        // Width of the menu depends of its contents and position
-        // We must check what its width would be without any obstruction
-        // This way, we can achieve good positioning for flipping the menu
-        let dimensions = {
-            width: null,
-            height: null
-        }
-
-        this.tribute.menu.style.cssText = `top: 0px;
+    this.tribute.menu.style.cssText = `top: 0px;
                                  left: 0px;
                                  position: fixed;
                                  zIndex: 10000;
                                  display: block;
                                  visibility; hidden;`
-       dimensions.width = this.tribute.menu.offsetWidth
-       dimensions.height = this.tribute.menu.offsetHeight
+    dimensions.width = this.tribute.menu.offsetWidth
+    dimensions.height = this.tribute.menu.offsetHeight
 
-       this.tribute.menu.style.cssText = `display: none;`
+    this.tribute.menu.style.cssText = `display: none;`
 
-       return dimensions
+    return dimensions
+  }
+
+  getTextAreaOrInputUnderlinePosition(element, position, flipped) {
+    let properties = ['direction', 'boxSizing', 'width', 'height', 'overflowX',
+      'overflowY', 'borderTopWidth', 'borderRightWidth',
+      'borderBottomWidth', 'borderLeftWidth', 'paddingTop',
+      'paddingRight', 'paddingBottom', 'paddingLeft',
+      'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch',
+      'fontSize', 'fontSizeAdjust', 'lineHeight', 'fontFamily',
+      'textAlign', 'textTransform', 'textIndent',
+      'textDecoration', 'letterSpacing', 'wordSpacing'
+    ]
+
+    let isFirefox = (window.mozInnerScreenX !== null)
+
+    let div = this.getDocument().createElement('div')
+    div.id = 'input-textarea-caret-position-mirror-div'
+    this.getDocument().body.appendChild(div)
+
+    let style = div.style
+    let computed = window.getComputedStyle ? getComputedStyle(element) : element.currentStyle
+
+    style.whiteSpace = 'pre-wrap'
+    if (element.nodeName !== 'INPUT') {
+      style.wordWrap = 'break-word'
     }
 
-    getTextAreaOrInputUnderlinePosition(element, position, flipped) {
-        let properties = ['direction', 'boxSizing', 'width', 'height', 'overflowX',
-            'overflowY', 'borderTopWidth', 'borderRightWidth',
-            'borderBottomWidth', 'borderLeftWidth', 'paddingTop',
-            'paddingRight', 'paddingBottom', 'paddingLeft',
-            'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch',
-            'fontSize', 'fontSizeAdjust', 'lineHeight', 'fontFamily',
-            'textAlign', 'textTransform', 'textIndent',
-            'textDecoration', 'letterSpacing', 'wordSpacing'
-        ]
+    // position off-screen
+    style.position = 'absolute'
+    style.visibility = 'hidden'
 
-        let isFirefox = (window.mozInnerScreenX !== null)
+    // transfer the element's properties to the div
+    properties.forEach(prop => {
+      style[prop] = computed[prop]
+    })
 
-        let div = this.getDocument().createElement('div')
-        div.id = 'input-textarea-caret-position-mirror-div'
-        this.getDocument().body.appendChild(div)
-
-        let style = div.style
-        let computed = window.getComputedStyle ? getComputedStyle(element) : element.currentStyle
-
-        style.whiteSpace = 'pre-wrap'
-        if (element.nodeName !== 'INPUT') {
-            style.wordWrap = 'break-word'
-        }
-
-        // position off-screen
-        style.position = 'absolute'
-        style.visibility = 'hidden'
-
-        // transfer the element's properties to the div
-        properties.forEach(prop => {
-            style[prop] = computed[prop]
-        })
-
-        if (isFirefox) {
-            style.width = `${(parseInt(computed.width) - 2)}px`
-            if (element.scrollHeight > parseInt(computed.height))
-                style.overflowY = 'scroll'
-        } else {
-            style.overflow = 'hidden'
-        }
-
-        div.textContent = element.value.substring(0, position)
-
-        if (element.nodeName === 'INPUT') {
-            div.textContent = div.textContent.replace(/\s/g, ' ')
-        }
-
-        let span = this.getDocument().createElement('span')
-        span.textContent = element.value.substring(position) || '.'
-        div.appendChild(span)
-
-        let rect = element.getBoundingClientRect()
-        let doc = document.documentElement
-        let windowLeft = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0)
-        let windowTop = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
-
-        let coordinates = {
-            top: rect.top + windowTop + span.offsetTop + parseInt(computed.borderTopWidth) + parseInt(computed.fontSize) - element.scrollTop,
-            left: rect.left + windowLeft + span.offsetLeft + parseInt(computed.borderLeftWidth)
-        }
-
-        let windowWidth = window.innerWidth
-        let windowHeight = window.innerHeight
-
-        let menuDimensions = this.getMenuDimensions()
-        let menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
-
-        if (menuIsOffScreen.right) {
-            coordinates.right = windowWidth - coordinates.left
-            coordinates.left = 'auto'
-        }
-
-        let parentHeight = this.tribute.menuContainer
-            ? this.tribute.menuContainer.offsetHeight
-            : this.getDocument().body.offsetHeight
-
-        if (menuIsOffScreen.bottom) {
-            let parentRect = this.tribute.menuContainer
-                ? this.tribute.menuContainer.getBoundingClientRect()
-                : this.getDocument().body.getBoundingClientRect()
-            let scrollStillAvailable = parentHeight - (windowHeight - parentRect.top)
-
-            coordinates.bottom = scrollStillAvailable + (windowHeight - rect.top - span.offsetTop)
-            coordinates.top = 'auto'
-        }
-
-        menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
-        if (menuIsOffScreen.left) {
-            coordinates.left = windowWidth > menuDimensions.width
-                ? windowLeft + windowWidth - menuDimensions.width
-                : windowLeft
-            delete coordinates.right
-        }
-        if (menuIsOffScreen.top) {
-            coordinates.top = windowHeight > menuDimensions.height
-                ? windowTop + windowHeight - menuDimensions.height
-                : windowTop
-            delete coordinates.bottom
-        }
-
-        this.getDocument().body.removeChild(div)
-        return coordinates
+    if (isFirefox) {
+      style.width = `${(parseInt(computed.width) - 2)}px`
+      if (element.scrollHeight > parseInt(computed.height))
+        style.overflowY = 'scroll'
+    } else {
+      style.overflow = 'hidden'
     }
 
-    getContentEditableCaretPosition(selectedNodePosition) {
-        let markerTextChar = '﻿'
-        let markerEl, markerId = `sel_${new Date().getTime()}_${Math.random().toString().substr(2)}`
-        let range
-        let sel = this.getWindowSelection()
-        let prevRange = sel.getRangeAt(0)
+    div.textContent = element.value.substring(0, position)
 
-        range = this.getDocument().createRange()
-        range.setStart(sel.anchorNode, selectedNodePosition)
-        range.setEnd(sel.anchorNode, selectedNodePosition)
-
-        range.collapse(false)
-
-        // Create the marker element containing a single invisible character using DOM methods and insert it
-        markerEl = this.getDocument().createElement('span')
-        markerEl.id = markerId
-
-        markerEl.appendChild(this.getDocument().createTextNode(markerTextChar))
-        range.insertNode(markerEl)
-        sel.removeAllRanges()
-        sel.addRange(prevRange)
-
-        let rect = markerEl.getBoundingClientRect()
-        let doc = document.documentElement
-        let windowLeft = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0)
-        let windowTop = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
-        let coordinates = {
-            left: rect.left + windowLeft,
-            top: rect.top + markerEl.offsetHeight + windowTop
-        }
-        let windowWidth = window.innerWidth
-        let windowHeight = window.innerHeight
-
-        let menuDimensions = this.getMenuDimensions()
-        let menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
-
-        if (menuIsOffScreen.right) {
-            coordinates.left = 'auto'
-            coordinates.right = windowWidth - rect.left - windowLeft
-        }
-
-        let parentHeight = this.tribute.menuContainer
-            ? this.tribute.menuContainer.offsetHeight
-            : this.getDocument().body.offsetHeight
-
-        if (menuIsOffScreen.bottom) {
-            let parentRect = this.tribute.menuContainer
-                ? this.tribute.menuContainer.getBoundingClientRect()
-                : this.getDocument().body.getBoundingClientRect()
-            let scrollStillAvailable = parentHeight - (windowHeight - parentRect.top)
-
-            coordinates.top = 'auto'
-            coordinates.bottom = scrollStillAvailable + (windowHeight - rect.top)
-        }
-
-        menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
-        if (menuIsOffScreen.left) {
-            coordinates.left = windowWidth > menuDimensions.width
-                ? windowLeft + windowWidth - menuDimensions.width
-                : windowLeft
-            delete coordinates.right
-        }
-        if (menuIsOffScreen.top) {
-            coordinates.top = windowHeight > menuDimensions.height
-                ? windowTop + windowHeight - menuDimensions.height
-                : windowTop
-            delete coordinates.bottom
-        }
-
-        markerEl.parentNode.removeChild(markerEl)
-        return coordinates
+    if (element.nodeName === 'INPUT') {
+      div.textContent = div.textContent.replace(/\s/g, ' ')
     }
 
-    scrollIntoView(elem) {
-        let reasonableBuffer = 20,
-            clientRect
-        let maxScrollDisplacement = 100
-        let e = this.menu
+    let span = this.getDocument().createElement('span')
+    span.textContent = element.value.substring(position) || '.'
+    div.appendChild(span)
 
-        if (typeof e === 'undefined') return;
+    let rect = element.getBoundingClientRect()
+    let doc = document.documentElement
+    let windowLeft = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0)
+    let windowTop = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
 
-        while (clientRect === undefined || clientRect.height === 0) {
-            clientRect = e.getBoundingClientRect()
-
-            if (clientRect.height === 0) {
-                e = e.childNodes[0]
-                if (e === undefined || !e.getBoundingClientRect) {
-                    return
-                }
-            }
-        }
-
-        let elemTop = clientRect.top
-        let elemBottom = elemTop + clientRect.height
-
-        if (elemTop < 0) {
-            window.scrollTo(0, window.pageYOffset + clientRect.top - reasonableBuffer)
-        } else if (elemBottom > window.innerHeight) {
-            let maxY = window.pageYOffset + clientRect.top - reasonableBuffer
-
-            if (maxY - window.pageYOffset > maxScrollDisplacement) {
-                maxY = window.pageYOffset + maxScrollDisplacement
-            }
-
-            let targetY = window.pageYOffset - (window.innerHeight - elemBottom)
-
-            if (targetY > maxY) {
-                targetY = maxY
-            }
-
-            window.scrollTo(0, targetY)
-        }
+    let coordinates = {
+      top: rect.top + windowTop + span.offsetTop + parseInt(computed.borderTopWidth) + parseInt(computed.fontSize) - element.scrollTop,
+      left: rect.left + windowLeft + span.offsetLeft + parseInt(computed.borderLeftWidth)
     }
+
+    let windowWidth = window.innerWidth
+    let windowHeight = window.innerHeight
+
+    let menuDimensions = this.getMenuDimensions()
+    let menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
+
+    if (menuIsOffScreen.right) {
+      coordinates.right = windowWidth - coordinates.left
+      coordinates.left = 'auto'
+    }
+
+    let parentHeight = this.tribute.menuContainer
+      ? this.tribute.menuContainer.offsetHeight
+      : this.getDocument().body.offsetHeight
+
+    if (menuIsOffScreen.bottom) {
+      let parentRect = this.tribute.menuContainer
+        ? this.tribute.menuContainer.getBoundingClientRect()
+        : this.getDocument().body.getBoundingClientRect()
+      let scrollStillAvailable = parentHeight - (windowHeight - parentRect.top)
+
+      coordinates.bottom = scrollStillAvailable + (windowHeight - rect.top - span.offsetTop)
+      coordinates.top = 'auto'
+    }
+
+    menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
+    if (menuIsOffScreen.left) {
+      coordinates.left = windowWidth > menuDimensions.width
+        ? windowLeft + windowWidth - menuDimensions.width
+        : windowLeft
+      delete coordinates.right
+    }
+    if (menuIsOffScreen.top) {
+      coordinates.top = windowHeight > menuDimensions.height
+        ? windowTop + windowHeight - menuDimensions.height
+        : windowTop
+      delete coordinates.bottom
+    }
+
+    this.getDocument().body.removeChild(div)
+    return coordinates
+  }
+
+  getContentEditableCaretPosition(selectedNodePosition) {
+    let markerTextChar = '﻿'
+    let markerEl, markerId = `sel_${new Date().getTime()}_${Math.random().toString().substr(2)}`
+    let range
+    let sel = this.getWindowSelection()
+    let prevRange = sel.getRangeAt(0)
+
+    range = this.getDocument().createRange()
+    range.setStart(sel.anchorNode, selectedNodePosition)
+    range.setEnd(sel.anchorNode, selectedNodePosition)
+
+    range.collapse(false)
+
+    // Create the marker element containing a single invisible character using DOM methods and insert it
+    markerEl = this.getDocument().createElement('span')
+    markerEl.id = markerId
+
+    markerEl.appendChild(this.getDocument().createTextNode(markerTextChar))
+    range.insertNode(markerEl)
+    sel.removeAllRanges()
+    sel.addRange(prevRange)
+
+    let rect = markerEl.getBoundingClientRect()
+    let doc = document.documentElement
+    let windowLeft = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0)
+    let windowTop = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
+    let coordinates = {
+      left: rect.left + windowLeft,
+      top: rect.top + markerEl.offsetHeight + windowTop
+    }
+    let windowWidth = window.innerWidth
+    let windowHeight = window.innerHeight
+
+    let menuDimensions = this.getMenuDimensions()
+    let menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
+
+    if (menuIsOffScreen.right) {
+      coordinates.left = 'auto'
+      coordinates.right = windowWidth - rect.left - windowLeft
+    }
+
+    let parentHeight = this.tribute.menuContainer
+      ? this.tribute.menuContainer.offsetHeight
+      : this.getDocument().body.offsetHeight
+
+    if (menuIsOffScreen.bottom) {
+      let parentRect = this.tribute.menuContainer
+        ? this.tribute.menuContainer.getBoundingClientRect()
+        : this.getDocument().body.getBoundingClientRect()
+      let scrollStillAvailable = parentHeight - (windowHeight - parentRect.top)
+
+      coordinates.top = 'auto'
+      coordinates.bottom = scrollStillAvailable + (windowHeight - rect.top)
+    }
+
+    menuIsOffScreen = this.isMenuOffScreen(coordinates, menuDimensions)
+    if (menuIsOffScreen.left) {
+      coordinates.left = windowWidth > menuDimensions.width
+        ? windowLeft + windowWidth - menuDimensions.width
+        : windowLeft
+      delete coordinates.right
+    }
+    if (menuIsOffScreen.top) {
+      coordinates.top = windowHeight > menuDimensions.height
+        ? windowTop + windowHeight - menuDimensions.height
+        : windowTop
+      delete coordinates.bottom
+    }
+
+    markerEl.parentNode.removeChild(markerEl)
+    return coordinates
+  }
+
+  scrollIntoView(elem) {
+    let reasonableBuffer = 20,
+      clientRect
+    let maxScrollDisplacement = 100
+    let e = this.menu
+
+    if (typeof e === 'undefined') return;
+
+    while (clientRect === undefined || clientRect.height === 0) {
+      clientRect = e.getBoundingClientRect()
+
+      if (clientRect.height === 0) {
+        e = e.childNodes[0]
+        if (e === undefined || !e.getBoundingClientRect) {
+          return
+        }
+      }
+    }
+
+    let elemTop = clientRect.top
+    let elemBottom = elemTop + clientRect.height
+
+    if (elemTop < 0) {
+      window.scrollTo(0, window.pageYOffset + clientRect.top - reasonableBuffer)
+    } else if (elemBottom > window.innerHeight) {
+      let maxY = window.pageYOffset + clientRect.top - reasonableBuffer
+
+      if (maxY - window.pageYOffset > maxScrollDisplacement) {
+        maxY = window.pageYOffset + maxScrollDisplacement
+      }
+
+      let targetY = window.pageYOffset - (window.innerHeight - elemBottom)
+
+      if (targetY > maxY) {
+        targetY = maxY
+      }
+
+      window.scrollTo(0, targetY)
+    }
+  }
 }
 
 

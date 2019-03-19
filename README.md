@@ -181,7 +181,7 @@ Collection object shown with defaults:
 
   // specify whether the menu should be positioned.  Set to false and use in conjuction with menuContainer to create an inline menu
   // (defaults to true)
-  positionMenu: true,
+  positionMenu: true||false||"tribute-container's width",
 
   // when the spacebar is hit, select the current match
   spaceSelectsMatch: false,

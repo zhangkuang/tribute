@@ -52,7 +52,7 @@ export type TributeCollection<T extends {}> = {
   replaceTextSuffix?: string
 
   //specify whether the menu should be positioned
-  positionMenu?: boolean
+  positionMenu?: any
 
   //specify whether to put Tribute in autocomplete mode
   autocompleteMode?: boolean
