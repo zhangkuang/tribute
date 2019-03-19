@@ -56,9 +56,11 @@ var TributeRange = function () {
           coordinates = this.getContentEditableCaretPosition(info.mentionPosition);
         }
         if (_typeof(this.tribute.positionMenu) === 'object') {
-          var positionMenu = this.tribute.positionMenu;
-
-          coordinates.left = coordinates.left + (positionMenu.fontSize || 12) - positionMenu.width / 2;
+          var positionMenu = this.tribute.positionMenu,
+              width = positionMenu.width,
+              bottom = positionMenu.bottom;
+          coordinates.left = coordinates.left + (positionMenu.fontSize || 12) - width / 2;
+          coordinates.bottom = coordinates.bottom + bottom;
         }
         this.tribute.menu.style.cssText = 'top: ' + coordinates.top + 'px;\n                                     left: ' + coordinates.left + 'px;\n                                     right: ' + coordinates.right + 'px;\n                                     bottom: ' + coordinates.bottom + 'px;\n                                     position: absolute;\n                                     zIndex: 10000;\n                                     display: block;';
 

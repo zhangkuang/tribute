@@ -39,8 +39,9 @@ class TributeRange {
         coordinates = this.getContentEditableCaretPosition(info.mentionPosition)
       }
       if (typeof this.tribute.positionMenu === 'object') {
-        const {positionMenu} = this.tribute;
-        coordinates.left = coordinates.left + (positionMenu.fontSize || 12) - positionMenu.width / 2;
+        const {positionMenu} = this.tribute, {width, bottom} = positionMenu;
+        coordinates.left = coordinates.left + (positionMenu.fontSize || 12) - width / 2;
+        coordinates.bottom = coordinates.bottom + bottom;
       }
       this.tribute.menu.style.cssText = `top: ${coordinates.top}px;
                                      left: ${coordinates.left}px;
